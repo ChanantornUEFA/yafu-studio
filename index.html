@@ -136,9 +136,16 @@ let currentSongIndex = null;
 // ================= AUTH =================
 
 window.register = async function(){
-  const email=emailInput.value;
-  const password=passwordInput.value;
-  await createUserWithEmailAndPassword(auth,email,password);
+  try{
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    await createUserWithEmailAndPassword(auth,email,password);
+    alert("สมัครสำเร็จ");
+
+  }catch(error){
+    alert("Register ผิดพลาด: " + error.message);
+  }
 };
 
 window.login = async function(){
@@ -147,9 +154,7 @@ window.login = async function(){
     const password = document.getElementById("password").value;
 
     await signInWithEmailAndPassword(auth,email,password);
-
     alert("เข้าสู่ระบบสำเร็จ");
-    window.location.reload();
 
   }catch(error){
     alert("Login ผิดพลาด: " + error.message);
@@ -308,28 +313,11 @@ function renderPreview(){
   }, 0);
 }
 
-  preview.appendChild(container);
-
-  song.chords.forEach(chord=>{
-    const target=container.querySelector(
-      `span[data-index='${chord.position}']`
-    );
-    if(!target) return;
-
-    const rect=target.getBoundingClientRect();
-    const parentRect=container.getBoundingClientRect();
-
-    const chordEl=document.createElement("span");
-    chordEl.innerText=chord.name;
-    chordEl.className="chord";
-    chordEl.style.left=(rect.left-parentRect.left)+"px";
-    chordEl.style.top=(rect.top-parentRect.top-20)+"px";
-    container.appendChild(chordEl);
-  });
-}
+ 
 </script>
 </body>
 </html>
+
 
 
 
