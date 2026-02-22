@@ -149,6 +149,7 @@ window.login = async function(){
     await signInWithEmailAndPassword(auth,email,password);
 
     alert("เข้าสู่ระบบสำเร็จ");
+    window.location.reload();
 
   }catch(error){
     alert("Login ผิดพลาด: " + error.message);
@@ -292,4 +293,5 @@ function renderPreview(){
 </script>
 </body>
 </html>
+
 
