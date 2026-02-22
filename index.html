@@ -259,17 +259,54 @@ async function saveCurrentSong(){
 }
 
 function renderPreview(){
-  const song=songs[currentSongIndex];
-  preview.innerHTML="";
-  const container=document.createElement("div");
-  container.style.position="relative";
+  const song = songs[currentSongIndex];
+  const preview = document.getElementById("preview");
+  preview.innerHTML = "";
 
-  for(let i=0;i<song.lyrics.length;i++){
-    const span=document.createElement("span");
-    span.innerText=song.lyrics[i];
-    span.dataset.index=i;
-    container.appendChild(span);
-  }
+  const container = document.createElement("div");
+  container.style.position = "relative";
+  container.style.whiteSpace = "pre-wrap";
+  container.style.fontFamily = "monospace";
+  container.style.lineHeight = "2.2em";
+
+  preview.appendChild(container);
+
+  const lyrics = song.lyrics;
+  const chords = song.chords;
+
+  // ใส่เนื้อเพลงก่อน
+  container.innerText = lyrics;
+
+  // รอ DOM render ก่อนคำนวณตำแหน่ง
+  setTimeout(() => {
+
+    chords.forEach((chord,index)=>{
+
+      const range = document.createRange();
+      const textNode = container.firstChild;
+
+      if(!textNode) return;
+
+      range.setStart(textNode, chord.position);
+      range.setEnd(textNode, chord.position);
+
+      const rect = range.getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+
+      const chordEl = document.createElement("span");
+      chordEl.innerText = chord.name;
+      chordEl.className = "chord";
+      chordEl.style.left = (rect.left - parentRect.left) + "px";
+      chordEl.style.top = (rect.top - parentRect.top - 22) + "px";
+
+      chordEl.onclick = ()=>openModal(index);
+
+      container.appendChild(chordEl);
+
+    });
+
+  }, 0);
+}
 
   preview.appendChild(container);
 
@@ -293,6 +330,7 @@ function renderPreview(){
 </script>
 </body>
 </html>
+
 
 
 
