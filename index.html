@@ -1,19 +1,286 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><!DOCTYPE html>
+<html lang="th">
 <head>
-  <title>Forum</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Chord Studio Pro Online</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#111;
+  color:white;
+}
+header{
+  background:#000;
+  padding:15px;
+  font-size:22px;
+  text-align:center;
+  font-weight:bold;
+}
+.container{ padding:20px; }
+button{
+  padding:8px 14px;
+  margin:5px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+.primary{ background:#00c3ff; color:black; }
+.danger{ background:#ff4444; color:white; }
+.secondary{ background:#444; color:white; }
+input, textarea{
+  padding:8px;
+  margin:5px 0;
+  width:100%;
+  border-radius:6px;
+  border:none;
+}
+.song-item{
+  background:#1e1e1e;
+  padding:12px;
+  margin:8px 0;
+  border-radius:8px;
+  cursor:pointer;
+}
+.editor{
+  position:relative;
+  font-family:monospace;
+  white-space:pre-wrap;
+  line-height:2.2em;
+}
+.chord{
+  position:absolute;
+  color:#00eaff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.modal{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+.modal-content{
+  background:#222;
+  padding:20px;
+  border-radius:10px;
+  width:380px;
+  text-align:center;
+}
+</style>
 </head>
-<body onload="loadPosts()">
+<body>
 
-  <h1>My Forum</h1>
+<header>🎸 Chord Studio Pro (Online)</header>
 
-  <div id="authArea"></div>
+<div class="container" id="authPage">
+  <h3>เข้าสู่ระบบ / สมัครสมาชิก</h3>
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button class="primary" onclick="login()">Login</button>
+  <button class="secondary" onclick="register()">Register</button>
+</div>
 
-  <a href="create.html">➕ สร้างโพสต์</a>
+<div class="container" id="homePage" style="display:none;">
+  <button onclick="logout()" class="danger">Logout</button>
+  <h3>เพลงของคุณ</h3>
+  <div id="songList"></div>
 
-  <div id="posts"></div>
+  <input id="newSongTitle" placeholder="ชื่อเพลง">
+  <button class="primary" onclick="createSong()">เพิ่มเพลง</button>
+</div>
 
-  <script type="module" src="app.js"></script>
+<div class="container" id="editorPage" style="display:none;">
+  <button onclick="goHome()">← กลับ</button>
+  <h3 id="songTitle"></h3>
+
+  <textarea id="lyricsInput" rows="6" placeholder="พิมพ์เนื้อเพลง"></textarea>
+
+  <input id="chordNameInput" placeholder="พิมพ์ชื่อคอร์ด">
+  <button class="primary" onclick="addChord()">เพิ่มคอร์ด</button>
+
+  <div id="preview" class="editor"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import {
+  getAuth, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+  getFirestore, collection, addDoc,
+  getDocs, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_CONFIG",
+  authDomain: "YOUR_CONFIG",
+  projectId: "YOUR_CONFIG",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let songs = [];
+let currentSongIndex = null;
+
+// ================= AUTH =================
+
+window.register = async function(){
+  const email=emailInput.value;
+  const password=passwordInput.value;
+  await createUserWithEmailAndPassword(auth,email,password);
+};
+
+window.login = async function(){
+  const email=emailInput.value;
+  const password=passwordInput.value;
+  await signInWithEmailAndPassword(auth,email,password);
+};
+
+window.logout = async function(){
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    authPage.style.display="none";
+    homePage.style.display="block";
+    loadSongs();
+  }else{
+    authPage.style.display="block";
+    homePage.style.display="none";
+    editorPage.style.display="none";
+  }
+});
+
+// ================= SONG =================
+
+async function loadSongs(){
+  const user=auth.currentUser;
+  songs=[];
+  const snapshot=await getDocs(
+    collection(db,"users",user.uid,"songs")
+  );
+  snapshot.forEach(docSnap=>{
+    songs.push({id:docSnap.id,...docSnap.data()});
+  });
+  renderSongList();
+}
+
+window.createSong = async function(){
+  const title=newSongTitle.value;
+  if(!title) return;
+  const user=auth.currentUser;
+
+  await addDoc(
+    collection(db,"users",user.uid,"songs"),
+    { title, lyrics:"", chords:[] }
+  );
+
+  newSongTitle.value="";
+  loadSongs();
+};
+
+function renderSongList(){
+  songList.innerHTML="";
+  songs.forEach((song,index)=>{
+    const div=document.createElement("div");
+    div.className="song-item";
+    div.innerText=song.title;
+    div.onclick=()=>openSong(index);
+    songList.appendChild(div);
+  });
+}
+
+function openSong(index){
+  currentSongIndex=index;
+  homePage.style.display="none";
+  editorPage.style.display="block";
+  songTitle.innerText=songs[index].title;
+  lyricsInput.value=songs[index].lyrics;
+  renderPreview();
+}
+
+window.goHome=function(){
+  editorPage.style.display="none";
+  homePage.style.display="block";
+};
+
+lyricsInput.addEventListener("input",async ()=>{
+  songs[currentSongIndex].lyrics=lyricsInput.value;
+  await saveCurrentSong();
+  renderPreview();
+});
+
+window.addChord = async function(){
+  const name=chordNameInput.value;
+  if(!name) return;
+
+  songs[currentSongIndex].chords.push({
+    name,
+    position: lyricsInput.selectionStart
+  });
+
+  chordNameInput.value="";
+  await saveCurrentSong();
+  renderPreview();
+};
+
+async function saveCurrentSong(){
+  const user=auth.currentUser;
+  const song=songs[currentSongIndex];
+
+  await updateDoc(
+    doc(db,"users",user.uid,"songs",song.id),
+    {
+      lyrics:song.lyrics,
+      chords:song.chords
+    }
+  );
+}
+
+function renderPreview(){
+  const song=songs[currentSongIndex];
+  preview.innerHTML="";
+  const container=document.createElement("div");
+  container.style.position="relative";
+
+  for(let i=0;i<song.lyrics.length;i++){
+    const span=document.createElement("span");
+    span.innerText=song.lyrics[i];
+    span.dataset.index=i;
+    container.appendChild(span);
+  }
+
+  preview.appendChild(container);
+
+  song.chords.forEach(chord=>{
+    const target=container.querySelector(
+      `span[data-index='${chord.position}']`
+    );
+    if(!target) return;
+
+    const rect=target.getBoundingClientRect();
+    const parentRect=container.getBoundingClientRect();
+
+    const chordEl=document.createElement("span");
+    chordEl.innerText=chord.name;
+    chordEl.className="chord";
+    chordEl.style.left=(rect.left-parentRect.left)+"px";
+    chordEl.style.top=(rect.top-parentRect.top-20)+"px";
+    container.appendChild(chordEl);
+  });
+}
+</script>
 </body>
 </html>
