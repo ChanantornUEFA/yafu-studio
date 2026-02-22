@@ -142,9 +142,17 @@ window.register = async function(){
 };
 
 window.login = async function(){
-  const email=emailInput.value;
-  const password=passwordInput.value;
-  await signInWithEmailAndPassword(auth,email,password);
+  try{
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    await signInWithEmailAndPassword(auth,email,password);
+
+    alert("เข้าสู่ระบบสำเร็จ");
+
+  }catch(error){
+    alert("Login ผิดพลาด: " + error.message);
+  }
 };
 
 window.logout = async function(){
@@ -284,3 +292,4 @@ function renderPreview(){
 </script>
 </body>
 </html>
+
